@@ -26,7 +26,7 @@ nbitq=8;
 
 %% Les paramètres du réseau à déterminer
 tansigfn=2 ;    % la fonction d'activation choisie dans le reseau final
-versimpl=0 ;    % 0 = version complete du réseau de neurones ; (avec optimisation des pixels utilisés)
+versimpl=1 ;    % 0 = version complete du réseau de neurones ; (avec optimisation des pixels utilisés)
                 % 1 = version simplifiée (sans optimisation des pixels utilisés)
 
 %% nombre d'images testées à la main
