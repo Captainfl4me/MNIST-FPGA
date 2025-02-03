@@ -24,25 +24,29 @@ end entity;
 
 architecture a1 of neurone1 is
     -- constant nb_Neurones : integer := 100;
-    signal mult1  , mult2   : typtabcst(0 to lngimag-1);  -- Signaux Multiplieurs
-    signal mult1_L, mult2_L : typtabcst(0 to lngimag-1);  -- Signaux Registre Multiplieurs
+    signal mult1, mult1_L : typtabcst(0 to lngimag-1);  -- Signaux Multiplieurs
+	signal mult2, mult2_L   : typtabcst(0 to nbsymbol-1);
     
-    signal add1  , add2     : typtabaccu; -- Signaux Additionneurs
-    signal add1_L, add2_L   : typtabaccu;  -- Signaux Registre Additionneurs
+    signal add1, add1_L : typtabaccu; -- Signaux Additionneurs
+    signal add2, add2_L : typtabaccu2;  -- Signaux Registre Additionneurs
 
-    signal activf1  , activf2   : typtabaccu; -- Signaux fonctions d'activation
-    signal activf1_L, activf2_L : typtabaccu; -- Signaux Registre fonctions d'activation
+    signal activf1, activf1_L : typtabaccu; -- Signaux fonctions d'activation
+    signal activf2, activf2_L : typtabaccu2; -- Signaux Registre fonctions d'activation
 
-	signal clkimg2 : std_logic := '0';
-	signal pixelin : sfixed(0 downto -nbitq) := (others => '0');
+	signal pixel_index     : integer range 0 to lngimag-1 := 0;
+	signal image_finish    : std_logic := '0';
+	signal clkimg2, start2 : std_logic := '0';
+	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
 begin
 	ready <= '1';
 	process (clock, reset) is
 	begin
 		if reset = '0' then
 			clkimg2 <= '0';
+			start2 <= '0';
 		elsif rising_edge(clock) then
 			clkimg2 <= clkimg;
+			start2 <= start;
 		end if;
 	end process;
 
@@ -54,6 +58,29 @@ begin
 		elsif rising_edge(clock) then
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
 				pixelin <= sfixed('0' & image);
+			end if;
+		end if;
+	end process;
+
+    -------------------------- Compteur index pixel ---------------------------------
+	process (clock, reset) is
+	begin
+		if reset = '0' then
+			pixel_index <= 0;
+			image_finish <= '0';
+		elsif rising_edge(clock) then
+			if start = '1' and start2 = '0' then -- rising edge
+				pixel_index <= 0;
+				image_finish <= '0';
+			else
+				if pixel_index >= lngimag-1  then
+					pixel_index <= 0;
+					image_finish <= '1';
+				elsif image_finish = '0' then
+					pixel_index <= pixel_index + 1;
+				else
+					pixel_index <= pixel_index;
+				end if;
 			end if;
 		end if;
 	end process;
@@ -75,12 +102,13 @@ begin
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
 
-    gen_Mult_1e : for i in 0 to (allcoef1'length-1) generate
+
+    gen_Mult_1e : for i in 0 to (mult1'length-1) generate
         mult1(i) <= resize(allcoef1(i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
-    gen_Add_1e : for i in 0 to (mult1_L'length-1) generate
-        add1(i) <= resize( mult1_L(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
+    gen_Add_1e : for i in 0 to (add1'length-1) generate
+        add1(i) <= resize(mult1_L(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
@@ -93,12 +121,12 @@ begin
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
 
-    gen_Mult_2e : for i in 0 to (allcoef2'length-1) generate
+    gen_Mult_2e : for i in 0 to (mult2'length-1) generate
         mult2(i) <= resize(allcoef2(i) * activf1_L(i) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
-    gen_Add_2e : for i in 0 to (mult2_L'length-1) generate
-        add2(i) <= resize( mult2_L(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
+    gen_Add_2e : for i in 0 to (add2'length-1) generate
+        add2(i) <= resize(mult2_L(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
@@ -106,7 +134,7 @@ begin
 
     process_2e_Activation : process(add2_L)
         variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5, -nbitq);  -- Les 2 maximums du réseau
-        variable maxI, maxI2 : integer range 0 to nbsymbol;	                              -- Indices des neurones maximum
+        variable maxI, maxI2 : integer range 0 to nbsymbol := 0;	                              -- Indices des neurones maximum
     begin
         for i in 0 to (add2_L'length-1) loop
             if add2_L(i) > maxT then
