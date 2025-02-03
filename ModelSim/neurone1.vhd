@@ -23,7 +23,32 @@ end entity;
 
 
 architecture a1 of neurone1 is
-
+	signal clkimg2 : std_logic := '0';
+	signal pixelin : unsigned(7 downto 0) := (others => '0');
 begin
+	ready <= '1';
+	-- clkimg sync
+	process (clock, reset) is
+	begin
+		if reset = '0' then
+			clkimg2 <= '0';
+		elsif rising_edge(clock) then
+			clkimg2 <= clkimg;
+		end if;
+	end process;
+
+	-- clkimg rising_edge detection
+	process (clock, reset) is
+	begin
+		if reset = '0' then
+			pixelin <= (others => '0');
+		elsif rising_edge(clock) then
+			if clkimg = '1' and clkimg2 = '0' then -- rising edge
+				pixelin <= image;
+			end if;
+		end if;
+	end process;
+
+	-- Last stage
 
 end architecture;
