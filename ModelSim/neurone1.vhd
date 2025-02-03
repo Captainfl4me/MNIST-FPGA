@@ -50,36 +50,29 @@ begin
 		end if;
 	end process;
 
-    -------------------------- Resynchro de image sur clock ---------------------------------
+    -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
 	process (clock, reset) is
 	begin
 		if reset = '0' then
 			pixelin <= (others => '0');
-		elsif rising_edge(clock) then
-			if clkimg = '1' and clkimg2 = '0' then -- rising edge
-				pixelin <= sfixed('0' & image);
-			end if;
-		end if;
-	end process;
-
-    -------------------------- Compteur index pixel ---------------------------------
-	process (clock, reset) is
-	begin
-		if reset = '0' then
 			pixel_index <= 0;
 			image_finish <= '0';
 		elsif rising_edge(clock) then
-			if start = '1' and start2 = '0' then -- rising edge
-				pixel_index <= 0;
-				image_finish <= '0';
-			else
-				if pixel_index >= lngimag-1  then
+			if clkimg = '1' and clkimg2 = '0' then -- rising edge
+				pixelin <= sfixed('0' & image);
+
+				if start = '1' and start2 = '0' then -- rising edge
 					pixel_index <= 0;
-					image_finish <= '1';
-				elsif image_finish = '0' then
-					pixel_index <= pixel_index + 1;
+					image_finish <= '0';
 				else
-					pixel_index <= pixel_index;
+					if pixel_index >= lngimag-1  then
+						pixel_index <= 0;
+						image_finish <= '1';
+					elsif image_finish = '0' then
+						pixel_index <= pixel_index + 1;
+					else
+						pixel_index <= pixel_index;
+					end if;
 				end if;
 			end if;
 		end if;
