@@ -23,7 +23,6 @@ end entity;
 
 
 architecture a1 of neurone1 is
-
     -- constant nb_Neurones : integer := 100;
     signal mult1  , mult2,  : typtabcst;  -- Signaux Multiplieurs
     signal mult1_L, mult2_L : typtabcst;  -- Signaux Registre Multiplieurs
@@ -34,8 +33,32 @@ architecture a1 of neurone1 is
     signal activf1  , activf2   : typtabaccu; -- Signaux fonctions d'activation
     signal activf1_L, activf2_L : typtabaccu; -- Signaux Registre fonctions d'activation
 
+	signal clkimg2 : std_logic := '0';
+	signal pixelin : unsigned(7 downto 0) := (others => '0');
 begin
+	ready <= '1';
+	process (clock, reset) is
+	begin
+		if reset = '0' then
+			clkimg2 <= '0';
+		elsif rising_edge(clock) then
+			clkimg2 <= clkimg;
+		end if;
+	end process;
 
+    -------------------------- Resynchro de image sur clock ---------------------------------
+	process (clock, reset) is
+	begin
+		if reset = '0' then
+			pixelin <= (others => '0');
+		elsif rising_edge(clock) then
+			if clkimg = '1' and clkimg2 = '0' then -- rising edge
+				pixelin <= image;
+			end if;
+		end if;
+	end process;
+
+    -------------------------- Etages de registres ---------------------------------
     process(clk)
     begin
         if rising_edge(clk) then
@@ -94,6 +117,4 @@ begin
             activf2(i) <= sfixed(add2_L/2.0, activf2(i), fixed_wrap, fixed_truncate);
         end if;   
     end generate;
-    
-
 end architecture;

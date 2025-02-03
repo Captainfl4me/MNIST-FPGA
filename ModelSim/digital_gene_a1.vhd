@@ -62,8 +62,8 @@ end function ;
 
 
 signal clki,clks,rst : std_logic := '0'  ;
-constant labels : labtab := read_label("C:\Users\PaulN\Travail\ING5\S2\ImpNum\Matlab_ModelSim_Quartus\ModelSim\tstlabels.txt",nbimag) ;
-constant images : imagtab := read_images("C:\Users\PaulN\Travail\ING5\S2\ImpNum\Matlab_ModelSim_Quartus\ModelSim\tstimgi.txt",nbimag,lngimag) ;
+constant labels : labtab := read_label("./tstlabels.txt",nbimag) ;
+constant images : imagtab := read_images("./tstimgi.txt",nbimag,lngimag) ;
 
 begin
 
@@ -72,18 +72,20 @@ reset <= rst ;
 
 pcki : process
 begin
-		clki <= '0' ; 
-		wait for clock_period*16 ;
-		while ready='0' loop
-			wait for clock_period ;
-		end loop ;
-		wait for clock_period*4 ;
-		clki <= '1'  ;	-- horloge interne
-		wait for clock_period*32 ;
-
+		clki <= '0'; 
+		wait for clock_period;
+		loop
+			clki <= '1'; 
+			wait for clock_period;
+			clki <= '0'  ;	-- horloge interne
+			wait for clock_period;
+			while ready='0' loop
+				wait for clock_period ;
+			end loop ;
+		end loop;
 end process ;
 
---clki <= not clki after clock_period/2 ;	-- horloge interne
+-- clki <= not clki after clock_period/2 ;	-- horloge interne
 
 clks <= not clks after clock_period/2 ;	-- horloge interne
 clkimg <= clki ;							-- horloge en sortie
