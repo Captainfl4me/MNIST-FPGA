@@ -56,13 +56,13 @@ begin
         mult1(i) <= sfixed(allcoef1(i) * image * ccf, mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
-    gen_Add_1e : for i in 0 to (allcoef1'length-1) generate
+    gen_Add_1e : for i in 0 to (mult1_L'length-1) generate
         add1(i) <= sfixed( mult1_L(i) + cct, add1(i), fixed_wrap, fixed_truncate);
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
 
-    gen_FctActiv_1e : for i in 0 to (allcoef1'length-1) generate
+    gen_FctActiv_1e : for i in 0 to (add1_L'length-1) generate
         if add1_L(i) > 2 then
             activf1(i) <= sfixed(1, activf1(i), fixed_wrap, fixed_truncate);
         elsif add1_L(i) < -2 then
@@ -74,26 +74,45 @@ begin
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
 
-    gen_Mult_2e : for i in 0 to (allcoef1'length-1) generate
+    gen_Mult_2e : for i in 0 to (allcoef2'length-1) generate
         mult2(i) <= sfixed(allcoef2(i) * activf1_L(i)) * ccf2, mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
-    gen_Add_2e : for i in 0 to (allcoef1'length-1) generate
+    gen_Add_2e : for i in 0 to (mult2_L'length-1) generate
         add2(i) <= sfixed( mult2_L(i) + cct2, add2(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
     -------------------------- Fonction d'activation 2 ---------------------------------
 
-    gen_FctActiv_2e : for i in 0 to (allcoef1'length-1) generate
-        if add2_L(i) > 2 then
-            activf2(i) <= sfixed(1, activf2(i), fixed_wrap, fixed_truncate);
-        elsif add2_L(i) < -2 then
-            activf2(i) <= sfixed(-1, activf2(i), fixed_wrap, fixed_truncate);
+    process_2e_ Activation : process(add2_L)
+        variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5 downto -nbitq);  -- Les 2 maximums du réseau
+        variable maxI, maxI2 : integer range 0 to nbsymbol;	                              -- Indices des neurones maximum
+    begin
+        for i in 0 to (add2_L'length-1) loop
+            if add2_L(i) > maxT then
+                maxT2 <= maxT;
+                maxI2 <= maxI;
+                maxI <= i;
+                maxT  <= resize(add2_L(i), maxT, fixed_wrap, fixed_truncate); 
+
+            elsif add2_L(i) > maxT2 then
+                maxI2 <= i;
+                maxT2 <= resize(add2_L(i), maxT2, fixed_wrap, fixed_truncate); 
+
+            end if;
+        end loop;
+
+        labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI,4) ;	
+        labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2,4);	
+
+        if max > max2*1.5 then
+            valid(to_integer(numaffich)) <= '1'; 
         else 
-            activf2(i) <= sfixed(add2_L/2.0, activf2(i), fixed_wrap, fixed_truncate);
-        end if;   
-    end generate;
+            valid(to_integer(numaffich)) <= '0'; 
+        end if;
+
+    end process proc_name;
     
 
 end architecture;
