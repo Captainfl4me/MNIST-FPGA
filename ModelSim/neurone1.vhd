@@ -34,7 +34,8 @@ architecture a1 of neurone1 is
     signal activf2 : typtabaccu2; -- Signaux Registre fonctions d'activation
 
 	type state is (sm_reset, sm_compute, sm_wait_start);
-	signal cur_state : state := sm_reset;
+	signal cur_state_m1 : state := sm_reset;
+	signal cur_state_m2 : state := sm_reset;
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
 	signal neuron_index    : integer range 0 to nbneuron-1 := 0;
@@ -57,19 +58,34 @@ begin
 	process (clock, reset) is
 	begin
 		if reset = '0' then
-			cur_state <= sm_reset;
+			cur_state_m1 <= sm_reset;
+			cur_state_m2 <= sm_reset;
 		elsif rising_edge(clock) then
-			case cur_state is
-				when sm_reset => cur_state <= sm_compute;
+			case cur_state_m1 is
+				when sm_reset => 
+					cur_state_m1 <= sm_compute;
 				when sm_compute => 
 					if start = '1' and start2 = '0' then -- rising edge
-						cur_state <= sm_reset;
-					elsif  pixel_index >= lngimag-1 then 
-						cur_state <= sm_wait_start; 
+						cur_state_m1 <= sm_reset;
+					elsif pixel_index >= lngimag-1 then 
+						cur_state_m1 <= sm_wait_start; 
 					end if;
 				when sm_wait_start =>
 					if start = '1' and start2 = '0' then -- rising edge
-						cur_state <= sm_reset;
+						cur_state_m1 <= sm_reset;
+					end if;
+			end case;
+			case cur_state_m2 is
+				when sm_reset => cur_state_m2 <= sm_wait_start;
+				when sm_compute => 
+					if neuron_index >= nbneuron-1 then
+						cur_state_m2 <= sm_reset;	
+					end if;
+				when sm_wait_start => 
+					if start = '1' and start2 = '0' then -- rising edge
+						cur_state_m2 <= sm_reset;
+					elsif pixel_index >= lngimag-1 then
+						cur_state_m2 <= sm_compute;
 					end if;
 			end case;
 		end if;
@@ -85,17 +101,22 @@ begin
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
 				pixelin <= sfixed('0' & image);
 
-				if cur_state = sm_compute then
+				if cur_state_m1 = sm_compute then
 					pixel_index <= pixel_index + 1;
 				else
 					pixel_index <= 0;
 				end if;
 			end if;
+
+			if cur_state_m2 = sm_compute and neuron_index < nbneuron-1 then
+				neuron_index <= neuron_index + 1;
+			else
+				neuron_index <= 0;
+			end if;
 		end if;
 	end process;
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
-
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
         mult1(i) <= resize(coef1(pixel_index, i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
@@ -105,7 +126,6 @@ begin
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
-
     gen_FctActiv_1e : for i in 0 to (add1'length-1) generate
 		activf1(i) <= to_sfixed(1, activf1(i)) when add1(i) > 2 else
 					  to_sfixed(-1, activf1(i)) when add1(i) < -2 else
@@ -113,7 +133,6 @@ begin
     end generate;
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
-
     gen_Mult_2e : for i in 0 to (mult2'length-1) generate
         mult2(i) <= resize(coef2(neuron_index, i) * activf1(i) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
@@ -124,7 +143,6 @@ begin
 
 
     -------------------------- Fonction d'activation 2 ---------------------------------
-
     process_2e_Activation : process(add2)
         variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5, -nbitq);  -- Les 2 maximums du réseau
         variable maxI, maxI2 : integer range 0 to nbsymbol := 0;	                              -- Indices des neurones maximum
