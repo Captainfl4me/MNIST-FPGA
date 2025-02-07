@@ -38,11 +38,15 @@ architecture a1 of neurone1 is
 	type state is (sm_reset, sm_compute, sm_wait_start);
 	signal cur_state_m1 : state := sm_reset;
 	signal cur_state_m2 : state := sm_reset;
+	signal stage_1_reset : std_logic := '0';
+	signal stage_2_reset : std_logic := '0';
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
+	signal pixel_index2    : integer range 0 to lngimag-1  := 0;
 	signal neuron_index    : integer range 0 to nbneuron-1 := 0;
 	signal clkimg2, start2 : std_logic := '0';
 	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
+	signal pixelin2        : sfixed(0 downto -nbitq) := (others => '0');
 begin
 	ready <= '1';
 	process (clock, reset) is
@@ -69,7 +73,7 @@ begin
 				when sm_compute => 
 					if start = '1' and start2 = '0' then -- rising edge
 						cur_state_m1 <= sm_reset;
-					elsif pixel_index >= lngimag-1 then 
+					elsif pixel_index2 >= lngimag-1 then 
 						cur_state_m1 <= sm_wait_start; 
 					end if;
 				when sm_wait_start =>
@@ -92,6 +96,8 @@ begin
 			end case;
 		end if;
 	end process;
+	stage_1_reset <= '0' when cur_state_m1 = sm_reset or reset = '0' else '1';
+	stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
 
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
 	process (clock, reset) is
@@ -103,11 +109,12 @@ begin
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
 				pixelin <= sfixed('0' & image);
 
-				if cur_state_m1 = sm_compute then
+				if cur_state_m1 = sm_compute and pixel_index < lngimag-1 then
 					pixel_index <= pixel_index + 1;
 				else
 					pixel_index <= 0;
 				end if;
+				pixelin2 <= pixelin;
 			end if;
 
 			if cur_state_m2 = sm_compute and neuron_index < nbneuron-1 then
@@ -115,6 +122,8 @@ begin
 			else
 				neuron_index <= 0;
 			end if;
+
+			pixel_index2 <= pixel_index;
 		end if;
 	end process;
 
@@ -125,11 +134,11 @@ begin
 
 
     gen_Add_1e : for i in 0 to (add1'length-1) generate
-        gest_Accu1 : process(clock, reset) is
+        gest_Accu1 : process(clock, stage_1_reset) is
         begin
-            if reset = '0' then
+            if stage_1_reset = '0' then
                 add1(i) <= to_sfixed(0, add1(i), fixed_wrap, fixed_truncate );
-            elsif clkimg = '1' and clkimg2 = '0' then
+            elsif rising_edge(clock) and clkimg = '1' and clkimg2 = '0' and cur_state_m1 = sm_compute then
                 add1(i) <= resize(add1(i) + mult1(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
             end if;
         end process;
@@ -144,13 +153,13 @@ begin
 
     -------------------------- D Latch Mémoire ---------------------------------
 
-    gen_Mem : process(clock, reset) is
+    gen_Mem : process(clock, stage_1_reset) is
     begin
-        if reset = '0' then
+        if stage_1_reset = '0' then
             for i in 0 to (activf1_L'length-1) loop
                 activf1_L(i) <= to_sfixed(0, activf1_L(i), fixed_wrap, fixed_truncate );
             end loop;
-		elsif XXX then
+		elsif rising_edge(clock) and pixel_index >= lngimag-1 then
             activf1_L <=  activf1;
         end if;
     end process;
@@ -161,11 +170,11 @@ begin
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate
-        gest_Accu1 : process(clock, reset) is
+        gest_Accu1 : process(clock, stage_1_reset) is
         begin
-            if reset = '0' then
+            if stage_1_reset = '0' then
                 add2(i) <= to_sfixed(0, add2(i), fixed_wrap, fixed_truncate );
-            elsif XXX then
+            elsif rising_edge(clock) and cur_state_m2 = sm_compute then
                 add2(i) <= resize(add2(i) + mult2(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
             end if;
         end process;
@@ -204,7 +213,7 @@ begin
         if reset = '0' then
             labl  <= (others => '0');	
             labl2 <= (others => '0');	
-        elsif rising_edge(clock) and XXX then
+        elsif rising_edge(clock) and neuron_index >= nbneuron-1 then
             labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4)  <= to_unsigned(maxI_L , 4);	
             labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2_L, 4);	
         end if;
