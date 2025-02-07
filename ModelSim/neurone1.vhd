@@ -24,11 +24,13 @@ end entity;
 
 architecture a1 of neurone1 is
     -- constant nb_Neurones : integer := 100;
-    signal mult1 : typtabcst(0 to nbneuron-1);  -- Signaux Multiplieurs
-	signal mult2 : typtabcst(0 to nbsymbol-1);
+    signal mult1 : typtabmul(0 to nbneuron-1);  -- Signaux Multiplieurs
+	signal mult2 : typtabmul(0 to nbsymbol-1);
     
     signal add1 : typtabaccu;   -- Signaux Additionneurs
     signal add2 : typtabaccu2;  -- Signaux Registre Additionneurs
+    signal add_with_bias : typtabaccu;  -- Signaux Registre Additionneurs
+    signal add2_with_bias : typtabaccu2;  -- Signaux Registre Additionneurs
 
     signal activf1, activf1_L : typtabaccu;  -- Signaux fonctions d'activation
 
@@ -142,16 +144,20 @@ begin
             if stage_1_reset = '0' then
                 add1(i) <= to_sfixed(0, add1(i), fixed_wrap, fixed_truncate );
             elsif rising_edge(clock) and clkimg = '1' and clkimg2 = '0' and cur_state_m1 = sm_compute then
-                add1(i) <= resize(add1(i) + mult1(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
+                add1(i) <= resize(add1(i) + mult1(i), add1(i), fixed_wrap, fixed_truncate);
             end if;
         end process;
+    end generate;
+
+    gen_Add_bias_1e : for i in 0 to (add_with_bias'length-1) generate
+		add_with_bias(i) <= resize(add1(i) + cst1(i) * to_sfixed(cct, 6, 0), add_with_bias(i), fixed_wrap, fixed_truncate);
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
     gen_FctActiv_1e : for i in 0 to (add1'length-1) generate
 		activf1(i) <= to_sfixed(1, activf1(i)) when add1(i) > 2 else
 					  to_sfixed(-1, activf1(i)) when add1(i) < -2 else
-					  resize(shift_right(add1(i), 1), activf1(i), fixed_wrap, fixed_truncate);
+					  resize(shift_right(add_with_bias(i), 1), activf1(i), fixed_wrap, fixed_truncate);
     end generate;
 
     -------------------------- D Latch Mémoire ---------------------------------
@@ -183,6 +189,10 @@ begin
         end process;
     end generate;
 
+    gen_Add_bias_2e : for i in 0 to (add2_with_bias'length-1) generate
+		add2_with_bias(i) <= resize(add2(i) + cst2(i) * to_sfixed(cct2, 6, 0), add2_with_bias(i), fixed_wrap, fixed_truncate);
+    end generate;
+
     -------------------------- Fonction d'activation 2 ---------------------------------
     process_2e_Activation : process(add2)
         variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5, -nbitq);  -- Les 2 maximums du réseau
@@ -198,10 +208,10 @@ begin
                 maxT2 := maxT;
                 maxI2 := maxI;
                 maxI  := i;
-                maxT  := resize(add2(i), maxT, fixed_wrap, fixed_truncate); 
+                maxT  := resize(add2_with_bias(i), maxT, fixed_wrap, fixed_truncate); 
             elsif add2(i) > maxT2 then
                 maxI2 := i;
-                maxT2 := resize(add2(i), maxT2, fixed_wrap, fixed_truncate); 
+                maxT2 := resize(add2_with_bias(i), maxT2, fixed_wrap, fixed_truncate); 
             end if;
         end loop;
 
