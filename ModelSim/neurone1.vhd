@@ -155,8 +155,8 @@ begin
 
     -------------------------- Fonction d'activation 1 ---------------------------------
     gen_FctActiv_1e : for i in 0 to (add1'length-1) generate
-		activf1(i) <= to_sfixed(1, activf1(i)) when add1(i) > 2 else
-					  to_sfixed(-1, activf1(i)) when add1(i) < -2 else
+		activf1(i) <= to_sfixed(1, activf1(i)) when add_with_bias(i) > 2 else
+					  to_sfixed(-1, activf1(i)) when add_with_bias(i) < -2 else
 					  resize(shift_right(add_with_bias(i), 1), activf1(i), fixed_wrap, fixed_truncate);
     end generate;
 
@@ -184,7 +184,7 @@ begin
             if stage_1_reset = '0' then
                 add2(i) <= to_sfixed(0, add2(i), fixed_wrap, fixed_truncate );
             elsif rising_edge(clock) and cur_state_m2 = sm_compute then
-                add2(i) <= resize(add2(i) + mult2(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
+                add2(i) <= resize(add2(i) + mult2(i), add2(i), fixed_wrap, fixed_truncate);
             end if;
         end process;
     end generate;
