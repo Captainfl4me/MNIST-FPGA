@@ -31,11 +31,10 @@ architecture a1 of neurone1 is
     signal add2 : typtabaccu2;  -- Signaux Registre Additionneurs
 
     signal activf1, activf1_L : typtabaccu;  -- Signaux fonctions d'activation
-    signal activf2, activf2_L : typtabaccu2; -- Signaux Registre fonctions d'activation
 
     signal maxI_L, maxI2_L : integer range 0 to nbsymbol;
 
-	type state is (sm_reset, sm_compute, sm_wait_start);
+	type state is (sm_reset, sm_compute, sm_save, sm_wait_start);
 	signal cur_state_m1 : state := sm_reset;
 	signal cur_state_m2 : state := sm_reset;
 	signal stage_1_reset : std_logic := '0';
@@ -47,6 +46,7 @@ architecture a1 of neurone1 is
 	signal clkimg2, start2 : std_logic := '0';
 	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
 	signal pixelin2        : sfixed(0 downto -nbitq) := (others => '0');
+	signal s_valid		   : std_logic_vector(4 downto 0) := (others => '0');
 begin
 	ready <= '1';
 	process (clock, reset) is
@@ -74,8 +74,10 @@ begin
 					if start = '1' and start2 = '0' then -- rising edge
 						cur_state_m1 <= sm_reset;
 					elsif pixel_index2 >= lngimag-1 then 
-						cur_state_m1 <= sm_wait_start; 
+						cur_state_m1 <= sm_save;
 					end if;
+				when sm_save =>
+					cur_state_m1 <= sm_wait_start;
 				when sm_wait_start =>
 					if start = '1' and start2 = '0' then -- rising edge
 						cur_state_m1 <= sm_reset;
@@ -85,12 +87,13 @@ begin
 				when sm_reset => cur_state_m2 <= sm_wait_start;
 				when sm_compute => 
 					if neuron_index >= nbneuron-1 then
-						cur_state_m2 <= sm_reset;	
+						cur_state_m2 <= sm_save;	
 					end if;
+				when sm_save => cur_state_m2 <= sm_reset;
 				when sm_wait_start => 
 					if start = '1' and start2 = '0' then -- rising edge
 						cur_state_m2 <= sm_reset;
-					elsif pixel_index >= lngimag-1 then
+					elsif cur_state_m1 = sm_save then
 						cur_state_m2 <= sm_compute;
 					end if;
 			end case;
@@ -129,7 +132,7 @@ begin
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
-        mult1(i) <= resize(coef1(pixel_index, i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
+        mult1(i) <= resize(coef1(pixel_index2, i) * pixelin2 * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
@@ -159,7 +162,7 @@ begin
             for i in 0 to (activf1_L'length-1) loop
                 activf1_L(i) <= to_sfixed(0, activf1_L(i), fixed_wrap, fixed_truncate );
             end loop;
-		elsif rising_edge(clock) and pixel_index >= lngimag-1 then
+		elsif rising_edge(clock) and cur_state_m1 = sm_save then
             activf1_L <=  activf1;
         end if;
     end process;
@@ -185,6 +188,11 @@ begin
         variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5, -nbitq);  -- Les 2 maximums du réseau
         variable maxI, maxI2 : integer range 0 to nbsymbol := 0;	                -- Indices des neurones maximum
     begin
+		maxI := 0;
+		maxI2 := 0;
+		maxT := to_sfixed(0, 5, -nbitq);
+		maxT2 := to_sfixed(0, 5, -nbitq);
+
         for i in 0 to (add2'length-1) loop
             if add2(i) > maxT then
                 maxT2 := maxT;
@@ -201,11 +209,12 @@ begin
         maxI2_L <= maxI2;
 
         if maxT > maxT2*1.5 then
-            valid(to_integer(numaffich)) <= '1'; 
+            s_valid(to_integer(numaffich)) <= '1'; 
         else 
-            valid(to_integer(numaffich)) <= '0'; 
+            s_valid(to_integer(numaffich)) <= '0'; 
         end if;
     end process;
+	valid <= s_valid;
 
     -------------------------- D Latch Mémoire ---------------------------------
     gen_MemO : process (clock, reset)
@@ -213,7 +222,7 @@ begin
         if reset = '0' then
             labl  <= (others => '0');	
             labl2 <= (others => '0');	
-        elsif rising_edge(clock) and neuron_index >= nbneuron-1 then
+        elsif rising_edge(clock) and cur_state_m2 = sm_save then
             labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4)  <= to_unsigned(maxI_L , 4);	
             labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2_L, 4);	
         end if;
