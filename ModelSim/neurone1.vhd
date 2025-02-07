@@ -27,11 +27,13 @@ architecture a1 of neurone1 is
     signal mult1 : typtabcst(0 to nbneuron-1);  -- Signaux Multiplieurs
 	signal mult2 : typtabcst(0 to nbsymbol-1);
     
-    signal add1 : typtabaccu; -- Signaux Additionneurs
+    signal add1 : typtabaccu;   -- Signaux Additionneurs
     signal add2 : typtabaccu2;  -- Signaux Registre Additionneurs
 
-    signal activf1 : typtabaccu; -- Signaux fonctions d'activation
-    signal activf2 : typtabaccu2; -- Signaux Registre fonctions d'activation
+    signal activf1, activf1_L : typtabaccu;  -- Signaux fonctions d'activation
+    signal activf2, activf2_L : typtabaccu2; -- Signaux Registre fonctions d'activation
+
+    signal maxI_L, maxI2_L : integer range 0 to nbsymbol;
 
 	type state is (sm_reset, sm_compute, sm_wait_start);
 	signal cur_state : state := sm_reset;
@@ -100,8 +102,16 @@ begin
         mult1(i) <= resize(coef1(pixel_index, i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
+
     gen_Add_1e : for i in 0 to (add1'length-1) generate
-        add1(i) <= resize(add1(i) + mult1(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
+        gest_Accu1 : process(clock, reset) is
+        begin
+            if reset = '0' then
+                add1(i) <= to_sfixed(0, add1(i), fixed_wrap, fixed_truncate );
+            elsif clkimg = '1' and clkimg2 = '0' then
+                add1(i) <= resize(add1(i) + mult1(i) + to_sfixed(cct, 6, 0), add1(i), fixed_wrap, fixed_truncate);
+            end if;
+        end process;
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
@@ -112,6 +122,19 @@ begin
 					  resize(shift_right(add1(i), 1), activf1(i), fixed_wrap, fixed_truncate);
     end generate;
 
+    -------------------------- D Latch Mémoire ---------------------------------
+
+    gen_Mem : process(clock, reset) is
+    begin
+        if reset = '0' then
+            for i in 0 to (activf1_L'length-1) loop
+                activf1_L(i) <= to_sfixed(0, activf1_L(i), fixed_wrap, fixed_truncate );
+            end loop;
+		elsif XXX then
+            activf1_L <=  activf1;
+        end if;
+    end process;
+
     -------------------------- Calculs neurones couche 2 ---------------------------------
 
     gen_Mult_2e : for i in 0 to (mult2'length-1) generate
@@ -119,15 +142,21 @@ begin
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate
-        add2(i) <= resize(add2(i) + mult2(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
+        gest_Accu1 : process(clock, reset) is
+        begin
+            if reset = '0' then
+                add2(i) <= to_sfixed(0, add2(i), fixed_wrap, fixed_truncate );
+            elsif XXX then
+                add2(i) <= resize(add2(i) + mult2(i) + to_sfixed(cct2, 6, 0), add2(i), fixed_wrap, fixed_truncate);
+            end if;
+        end process;
     end generate;
-
 
     -------------------------- Fonction d'activation 2 ---------------------------------
 
     process_2e_Activation : process(add2)
         variable maxT, maxT2 : sfixed(5 downto -nbitq) := to_sfixed(0, 5, -nbitq);  -- Les 2 maximums du réseau
-        variable maxI, maxI2 : integer range 0 to nbsymbol := 0;	                              -- Indices des neurones maximum
+        variable maxI, maxI2 : integer range 0 to nbsymbol := 0;	                -- Indices des neurones maximum
     begin
         for i in 0 to (add2'length-1) loop
             if add2(i) > maxT then
@@ -141,13 +170,25 @@ begin
             end if;
         end loop;
 
-        labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4)  <= to_unsigned(maxI, 4);	
-        labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2, 4);	
+        maxI_L  <= maxI;
+        maxI2_L <= maxI2;
 
         if maxT > maxT2*1.5 then
             valid(to_integer(numaffich)) <= '1'; 
         else 
             valid(to_integer(numaffich)) <= '0'; 
+        end if;
+    end process;
+
+    -------------------------- D Latch Mémoire ---------------------------------
+    gen_MemO : process (clock, reset)
+    begin
+        if reset = '0' then
+            labl  <= (others => '0');	
+            labl2 <= (others => '0');	
+        elsif rising_edge(clock) and XXX then
+            labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4)  <= to_unsigned(maxI_L , 4);	
+            labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2_L, 4);	
         end if;
     end process;
 end architecture;
