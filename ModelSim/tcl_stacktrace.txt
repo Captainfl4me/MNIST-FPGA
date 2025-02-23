@@ -1,0 +1,7 @@
+Tue Feb 18 19:42:28 CET 2025
+Trace back: invalid command name "::.main_pane.dataflow.interior.cs.body.pw.df.c"
+    while executing
+"::.main_pane.dataflow.interior.cs.body.pw.df.c RegenerateLayout -placement"
+    ("after" script)
+  <2:C:/intelFPGA/20.1/modelsim_ase/win32aloem/tk8.6/bgerror.tcl:106: ::tkerror {invalid command name "::.main_pane.dataflow.interior.cs.body.pw.df.c"}
+  <1:eval:1: ::tk::dialog::error::bgerror {invalid command name "::.main_pane.dataflow.interior.cs.body.pw.df.c"}

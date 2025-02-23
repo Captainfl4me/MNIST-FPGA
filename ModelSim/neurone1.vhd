@@ -24,12 +24,12 @@ end entity;
 
 architecture a1 of neurone1 is
     -- constant nb_Neurones : integer := 100;
-    signal mult1 : typtabmul(0 to nbneuron-1);  -- Signaux Multiplieurs
-	signal mult2 : typtabmul(0 to nbsymbol-1);
+    signal mult1, mult1_bis : typtabmul(0 to nbneuron-1);  -- Signaux Multiplieurs
+	signal mult2, mult2_bis : typtabmul(0 to nbsymbol-1);
     
     signal add1 : typtabaccu;   -- Signaux Additionneurs
     signal add2 : typtabaccu2;  -- Signaux Registre Additionneurs
-    signal add_with_bias : typtabaccu;  -- Signaux Registre Additionneurs
+    signal add_with_bias,  addBias: typtabaccu;  -- Signaux Registre Additionneurs
     signal add2_with_bias : typtabaccu2;  -- Signaux Registre Additionneurs
 
     signal activf1, activf1_L : typtabaccu;  -- Signaux fonctions d'activation
@@ -49,6 +49,8 @@ architecture a1 of neurone1 is
 	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
 	signal pixelin2        : sfixed(0 downto -nbitq) := (others => '0');
 	signal s_valid		   : std_logic_vector(4 downto 0) := (others => '0');
+	
+	signal image_sfixed    : sfixed(0 downto -nbitq);
 begin
 	ready <= '1';
 	process (clock, reset) is
@@ -105,6 +107,8 @@ begin
 	stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
 
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
+	image_sfixed <= to_sfixed(real(to_integer(image)) / 255.0, 0, -nbitq);
+
 	process (clock, reset) is
 	begin
 		if reset = '0' then
@@ -112,7 +116,7 @@ begin
 			pixel_index <= 0;
 		elsif rising_edge(clock) then
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
-				pixelin <= sfixed('0' & image);
+				pixelin <= image_sfixed; -- pixelin <= sfixed('0' & image);
 
 				if cur_state_m1 = sm_compute and pixel_index < lngimag-1 then
 					pixel_index <= pixel_index + 1;
@@ -134,7 +138,10 @@ begin
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
-        mult1(i) <= resize(coef1(pixel_index2, i) * pixelin2 * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
+        --mult1_bis(i) <= resize(coef1(pixel_index2, i) * pixelin2 * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
+
+		mult1_bis(i) <= resize( to_sfixed(ccf, 5, 0)* pixelin2, mult1_bis(i), fixed_wrap, fixed_truncate);
+		mult1(i) <= resize(mult1_bis(i) * coef1(pixel_index2, i), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
@@ -150,7 +157,8 @@ begin
     end generate;
 
     gen_Add_bias_1e : for i in 0 to (add_with_bias'length-1) generate
-		add_with_bias(i) <= resize(add1(i) + cst1(i) * to_sfixed(cct, 6, 0), add_with_bias(i), fixed_wrap, fixed_truncate);
+		addBias(i) <= resize(cst1(i) * to_sfixed(cct, 6, 0), addBias(i), fixed_wrap, fixed_truncate);
+		add_with_bias(i) <= resize(add1(i) + addBias(i) , add_with_bias(i), fixed_wrap, fixed_truncate);
     end generate;
 
     -------------------------- Fonction d'activation 1 ---------------------------------
@@ -175,7 +183,10 @@ begin
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
     gen_Mult_2e : for i in 0 to (mult2'length-1) generate
-        mult2(i) <= resize(coef2(neuron_index, i) * activf1(i) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
+        --mult2(i) <= resize(coef2(neuron_index, i) * activf1(i) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
+
+		mult2_bis(i) <= resize( to_sfixed(ccf, 5, 0)* activf1(i), mult2_bis(i), fixed_wrap, fixed_truncate);
+		mult2(i)     <= resize( mult2_bis(i) * coef2(neuron_index, i), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate

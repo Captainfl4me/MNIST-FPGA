@@ -20,9 +20,9 @@
 global tansigparam
 
 %% nombre de neurones dans la première couche du réseau
-hiddenLayerSize = 70;
+hiddenLayerSize = 80;
 % nombre de bits pour quantifier la partie décimale des coefficients
-nbitq=8;
+nbitq=32;
 
 %% Les paramètres du réseau à déterminer
 tansigfn=2 ;    % la fonction d'activation choisie dans le reseau final
@@ -83,7 +83,7 @@ trainFcn = 'trainscg';
 
 %% calcul du réseau
 
-if ~exist("net","var") || (hiddenLayerSize~=net.layers{1}.size)
+%if ~exist("net","var") || (hiddenLayerSize~=net.layers{1}.size)
     net = patternnet(hiddenLayerSize, trainFcn);
     
     % Setup Division of Data for Training, Validation, Testing
@@ -116,7 +116,7 @@ if ~exist("net","var") || (hiddenLayerSize~=net.layers{1}.size)
     percentErrors_netdata = sum(tind ~= yind)/numel(tind)*100 ;
     disp(['pourcentage d''erreurs après entrainement : ' num2str(percentErrors_netdata) '%']);
 
-end
+%end
 
 % on nécupère les coefficients du réseau
 % cf = coefficients du premier étage

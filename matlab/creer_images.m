@@ -36,8 +36,8 @@ facty = 0.8 ;  % facteur de taille en y (pour compenser la dilatation des images
 fscalmin = 0.8 ; % facteur d'échelle minimal
 fscalmax = 1.0 ; % facteur d'échelle maximal
 fang = 6; % écart type du facteur de rotation en °
-fdltx = 9; % ecart type translation en x
-fdlty = 9; % ecart type translation en y
+fdltx = 8; % ecart type translation en x
+fdlty = 8; % ecart type translation en y
 modg = 3; % mode aléatoire sur chaque pixel :
 % 0 on laisse tel quel 1 on passe en noir et blanc 
 % 2 on met 15% de gain aléatoire sur la luminosite globale
