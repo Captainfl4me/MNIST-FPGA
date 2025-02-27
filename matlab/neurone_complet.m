@@ -20,9 +20,9 @@
 global tansigparam
 
 %% nombre de neurones dans la première couche du réseau
-hiddenLayerSize = 70;
+hiddenLayerSize = 80;
 % nombre de bits pour quantifier la partie décimale des coefficients
-nbitq=8;
+nbitq=16;
 
 %% Les paramètres du réseau à déterminer
 tansigfn=2 ;    % la fonction d'activation choisie dans le reseau final
