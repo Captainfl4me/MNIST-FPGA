@@ -43,11 +43,9 @@ architecture a1 of neurone1 is
 	signal stage_2_reset : std_logic := '0';
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
-	signal pixel_index2    : integer range 0 to lngimag-1  := 0;
 	signal neuron_index    : integer range 0 to nbneuron-1 := 0;
 	signal clkimg2, start2 : std_logic := '0';
 	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
-	signal pixelin2        : sfixed(0 downto -nbitq) := (others => '0');
 	signal s_valid		   : std_logic_vector(4 downto 0) := (others => '0');
 begin
 	ready <= '1';
@@ -75,7 +73,7 @@ begin
 				when sm_compute => 
 					if start = '1' and start2 = '0' then -- rising edge
 						cur_state_m1 <= sm_reset;
-					elsif pixel_index2 >= lngimag-1 then 
+					elsif pixel_index >= lngimag-1 then 
 						cur_state_m1 <= sm_save;
 					end if;
 				when sm_save =>
@@ -105,21 +103,20 @@ begin
 	stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
 
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
-	process (clock, reset) is
+	process (clock, stage_1_reset) is
 	begin
-		if reset = '0' then
+		if stage_1_reset = '0' then
 			pixelin <= (others => '0');
 			pixel_index <= 0;
 		elsif rising_edge(clock) then
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
-				pixelin <= sfixed('0' & image);
+				pixelin <= to_sfixed(real(to_integer(image)) / 255.0, 0, -nbitq);
 
 				if cur_state_m1 = sm_compute and pixel_index < lngimag-1 then
 					pixel_index <= pixel_index + 1;
 				else
 					pixel_index <= 0;
 				end if;
-				pixelin2 <= pixelin;
 			end if;
 
 			if cur_state_m2 = sm_compute and neuron_index < nbneuron-1 then
@@ -127,14 +124,12 @@ begin
 			else
 				neuron_index <= 0;
 			end if;
-
-			pixel_index2 <= pixel_index;
 		end if;
 	end process;
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
-        mult1(i) <= resize(coef1(pixel_index2, i) * pixelin2 * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
+        mult1(i) <= resize(coef1(pixel_index, i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
@@ -175,7 +170,7 @@ begin
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
     gen_Mult_2e : for i in 0 to (mult2'length-1) generate
-        mult2(i) <= resize(coef2(neuron_index, i) * activf1(i) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
+        mult2(i) <= resize(coef2(neuron_index, i) * activf1_L(neuron_index) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate
