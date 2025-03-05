@@ -40,13 +40,17 @@ architecture a1 of neurone1 is
 	signal cur_state_m1 : state := sm_reset;
 	signal cur_state_m2 : state := sm_reset;
 	signal stage_1_reset : std_logic := '0';
-	signal stage_2_reset : std_logic := '0';
+	--signal stage_2_reset : std_logic := '0';
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
 	signal neuron_index    : integer range 0 to nbneuron-1 := 0;
 	signal clkimg2, start2 : std_logic := '0';
 	signal pixelin         : sfixed(0 downto -nbitq) := (others => '0');
 	signal s_valid		   : std_logic_vector(4 downto 0) := (others => '0');
+	
+	signal coeff1_i       : typtabcn1;
+	signal coeff2_i       : typtabcn2;
+	
 begin
 	ready <= '1';
 	process (clock, reset) is
@@ -100,7 +104,7 @@ begin
 		end if;
 	end process;
 	stage_1_reset <= '0' when cur_state_m1 = sm_reset or reset = '0' else '1';
-	stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
+	--stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
 
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
 	process (clock, stage_1_reset) is
@@ -128,10 +132,19 @@ begin
 			end if;
 		end if;
 	end process;
+	
+
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
+	splitting1 : process(clock) 
+	begin   
+		if rising_edge(clock) then
+			coeff1_i(0 to nbneuron-1) <= coef1(pixel_index)(0 to nbneuron-1);
+		end if;
+	end process;
+	 
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
-        mult1(i) <= resize(coef1(pixel_index, i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
+        mult1(i) <= resize(coeff1_i(i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
 
 
@@ -171,8 +184,17 @@ begin
     end process;
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
-    gen_Mult_2e : for i in 0 to (mult2'length-1) generate
-        mult2(i) <= resize(coef2(neuron_index, i) * activf1_L(neuron_index) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
+	
+	splitting2 : process(clock) 
+	begin   
+		if rising_edge(clock) then
+			coeff2_i(0 to nbsymbol-1) <= coef2(neuron_index)(0 to nbsymbol-1);
+		end if;
+	end process;
+	
+	
+  	 gen_Mult_2e : for i in 0 to (mult2'length-1) generate
+        mult2(i) <= resize(coeff2_i(i) * activf1_L(neuron_index) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate
@@ -181,9 +203,9 @@ begin
             if stage_1_reset = '0' then
                 add2(i) <= to_sfixed(0, add2(i), fixed_wrap, fixed_truncate );
             elsif rising_edge(clock) and cur_state_m2 = sm_compute then
-                add2(i) <= resize(add2(i) + mult2(i), add2(i), fixed_wrap, fixed_truncate);
+               add2(i) <= resize(add2(i) + mult2(i), add2(i), fixed_wrap, fixed_truncate);
             end if;
-        end process;
+      end process;
     end generate;
 
     gen_Add_bias_2e : for i in 0 to (add2_with_bias'length-1) generate
@@ -201,7 +223,7 @@ begin
 		maxT2 := to_sfixed(0, 5, -nbitq);
 
         for i in 0 to (add2'length-1) loop
-            if add2(i) > maxT then
+           if add2(i) > maxT then
                 maxT2 := maxT;
                 maxI2 := maxI;
                 maxI  := i;
@@ -229,7 +251,7 @@ begin
         if reset = '0' then
             labl  <= (others => '0');	
             labl2 <= (others => '0');	
-        elsif rising_edge(clock) and cur_state_m2 = sm_save then
+       elsif rising_edge(clock) and cur_state_m2 = sm_save then
             labl(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4)  <= to_unsigned(maxI_L , 4);	
             labl2(to_integer(numaffich)*4+3 downto to_integer(numaffich)*4) <= to_unsigned(maxI2_L, 4);	
         end if;

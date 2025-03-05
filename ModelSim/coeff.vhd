@@ -22,8 +22,15 @@ constant cct2 : integer := 1 ;
 type typtabup is array(0 to lngimag-1) of std_logic ;								-- tableau indiquant les pixels effectivement utilisés lors des calculs
 type typtabmul is array(natural range <>) of sfixed(3 downto -nbitq);
 type typtabcst is array(natural range <>) of sfixed(1 downto -nbitq);
-type typtabcnf1 is array(0 to lngimag-1, 0 to nbneuron-1) of sfixed(1 downto -nbitq);
-type typtabcnf2 is array(0 to nbneuron-1, 0 to nbsymbol-1) of sfixed(1 downto -nbitq);
+
+type typtabcn1  is array(0 to nbneuron-1) of sfixed(1 downto -nbitq) ;
+type typtabcnf1 is array(0 to lngimag-1) of typtabcn1 ;	
+--type typtabcnf1 is array(0 to lngimag-1, 0 to nbneuron-1) of sfixed(1 downto -nbitq);
+
+type typtabcn2  is array(0 to nbsymbol-1) of sfixed(1 downto -nbitq) ;
+type typtabcnf2 is array(0 to nbneuron-1) of typtabcn2 ;	
+--type typtabcnf2 is array(0 to nbneuron-1, 0 to nbsymbol-1) of sfixed(1 downto -nbitq);
+
 type typtabaccu is array(0 to nbneuron-1) of sfixed(8 downto -2*nbitq) ;
 type typtabaccu2 is array(0 to nbsymbol-1) of sfixed(8 downto -2*nbitq) ;
 subtype usng4 is unsigned(3 downto 0) ;
