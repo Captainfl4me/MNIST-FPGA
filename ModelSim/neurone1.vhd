@@ -135,13 +135,7 @@ begin
 
 
     -------------------------- Calculs neurones couche 1 ---------------------------------
-	splitting1 : process(clock) 
-	begin   
-		if rising_edge(clock) then
-			coeff1_i(0 to nbneuron-1) <= coef1(pixel_index)(0 to nbneuron-1);
-		end if;
-	end process;
-	 
+	coeff1_i(0 to nbneuron-1) <= coef1(pixel_index)(0 to nbneuron-1);
     gen_Mult_1e : for i in 0 to (mult1'length-1) generate
         mult1(i) <= resize(coeff1_i(i) * pixelin * to_sfixed(ccf, 5, 0), mult1(i), fixed_wrap, fixed_truncate);
     end generate;
@@ -183,16 +177,8 @@ begin
     end process;
 
     -------------------------- Calculs neurones couche 2 ---------------------------------
-	
-	splitting2 : process(clock) 
-	begin   
-		if rising_edge(clock) then
-			coeff2_i(0 to nbsymbol-1) <= coef2(neuron_index)(0 to nbsymbol-1);
-		end if;
-	end process;
-	
-	
-  	 gen_Mult_2e : for i in 0 to (mult2'length-1) generate
+	coeff2_i(0 to nbsymbol-1) <= coef2(neuron_index)(0 to nbsymbol-1);
+	gen_Mult_2e : for i in 0 to (mult2'length-1) generate
         mult2(i) <= resize(coeff2_i(i) * activf1_L(neuron_index) * to_sfixed(ccf2, 5, 0), mult2(i), fixed_wrap, fixed_truncate);
     end generate;
 
@@ -222,13 +208,13 @@ begin
 		maxT2 := to_sfixed(0, 5, -nbitq);
 
         for i in 0 to (add2'length-1) loop
-           if add2(i) > maxT then
+			if add2(i) > maxT then
                 maxT2 := maxT;
                 maxI2 := maxI;
                 maxI  := i;
                 maxT  := resize(add2_with_bias(i), maxT, fixed_wrap, fixed_truncate); 
-            elsif add2(i) > maxT2 then
-                maxI2 := i;
+			elsif add2(i) > maxT2 then
+				maxI2 := i;
                 maxT2 := resize(add2_with_bias(i), maxT2, fixed_wrap, fixed_truncate); 
             end if;
         end loop;
