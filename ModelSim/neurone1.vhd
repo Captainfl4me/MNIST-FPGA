@@ -104,13 +104,15 @@ begin
 
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
 	process (clock, stage_1_reset) is
+		variable pixelin0: sfixed(0 downto -8) := (others => '0');
 	begin
 		if stage_1_reset = '0' then
 			pixelin <= (others => '0');
 			pixel_index <= 0;
 		elsif rising_edge(clock) then
 			if clkimg = '1' and clkimg2 = '0' then -- rising edge
-				pixelin <= to_sfixed(real(to_integer(image)) / 255.0, 0, -nbitq);
+				pixelin0 := sfixed('0' & image);
+				pixelin <= resize(pixelin0, pixelin, fixed_wrap, fixed_truncate);
 
 				if cur_state_m1 = sm_compute and pixel_index < lngimag-1 then
 					pixel_index <= pixel_index + 1;
