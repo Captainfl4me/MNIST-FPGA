@@ -40,7 +40,7 @@ architecture a1 of neurone1 is
 	signal cur_state_m1 : state := sm_reset;
 	signal cur_state_m2 : state := sm_reset;
 	signal stage_1_reset : std_logic := '0';
-	--signal stage_2_reset : std_logic := '0';
+
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
 	signal neuron_index    : integer range 0 to nbneuron-1 := 0;
@@ -104,8 +104,7 @@ begin
 		end if;
 	end process;
 	stage_1_reset <= '0' when cur_state_m1 = sm_reset or reset = '0' else '1';
-	--stage_2_reset <= '0' when cur_state_m2 = sm_reset or reset = '0' else '1';
-
+	
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
 	process (clock, stage_1_reset) is
 		variable pixelin0: sfixed(0 downto -8) := (others => '0');
