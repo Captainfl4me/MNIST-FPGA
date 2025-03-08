@@ -39,7 +39,7 @@ architecture a1 of neurone1 is
 	type state is (sm_reset, sm_compute, sm_save, sm_wait_start);
 	signal cur_state_m1 : state := sm_reset;
 	signal cur_state_m2 : state := sm_reset;
-	signal stage_1_reset : std_logic := '0';
+	signal stage_reset : std_logic := '0';
 
 
 	signal pixel_index     : integer range 0 to lngimag-1  := 0;
@@ -103,13 +103,13 @@ begin
 			end case;
 		end if;
 	end process;
-	stage_1_reset <= '0' when cur_state_m1 = sm_reset or reset = '0' else '1';
+	stage_reset <= '0' when cur_state_m1 = sm_reset or reset = '0' else '1';
 	
     -------------------------- Resynchro de image sur clock & Compteur index pixel ---------------------------------
-	process (clock, stage_1_reset) is
+	process (clock, stage_reset) is
 		variable pixelin0: sfixed(0 downto -8) := (others => '0');
 	begin
-		if stage_1_reset = '0' then
+		if stage_reset = '0' then
 			pixelin <= (others => '0');
 			pixel_index <= 0;
 		elsif rising_edge(clock) then
@@ -142,9 +142,9 @@ begin
 
 
     gen_Add_1e : for i in 0 to (add1'length-1) generate
-        gest_Accu1 : process(clock, stage_1_reset) is
+        gest_Accu1 : process(clock, stage_reset) is
         begin
-            if stage_1_reset = '0' then
+            if stage_reset = '0' then
                 add1(i) <= to_sfixed(0, add1(i), fixed_wrap, fixed_truncate );
             elsif rising_edge(clock) and clkimg = '1' and clkimg2 = '0' and cur_state_m1 = sm_compute then
                 add1(i) <= resize(add1(i) + mult1(i), add1(i), fixed_wrap, fixed_truncate);
@@ -165,9 +165,9 @@ begin
 
     -------------------------- D Latch Mémoire ---------------------------------
 
-    gen_Mem : process(clock, stage_1_reset) is
+    gen_Mem : process(clock, stage_reset) is
     begin
-        if stage_1_reset = '0' then
+        if stage_reset = '0' then
             for i in 0 to (activf1_L'length-1) loop
                 activf1_L(i) <= to_sfixed(0, activf1_L(i), fixed_wrap, fixed_truncate );
             end loop;
@@ -183,9 +183,9 @@ begin
     end generate;
 
     gen_Add_2e : for i in 0 to (add2'length-1) generate
-        gest_Accu1 : process(clock, stage_1_reset) is
+        gest_Accu1 : process(clock, stage_reset) is
         begin
-            if stage_1_reset = '0' then
+            if stage_reset = '0' then
                 add2(i) <= to_sfixed(0, add2(i), fixed_wrap, fixed_truncate );
             elsif rising_edge(clock) and cur_state_m2 = sm_compute then
                add2(i) <= resize(add2(i) + mult2(i), add2(i), fixed_wrap, fixed_truncate);
